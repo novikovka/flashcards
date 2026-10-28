@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Карточки</title>
-    <!-- Подключаем наш современный шрифт Onest -->
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Шапка приложения -->
     <header class="top-nav">
         <div class="logo">К</div>
         <h1>Карточки</h1>
@@ -25,9 +23,7 @@
                 </div>
                 <button id="btn-show-new-deck" class="btn-primary">+ Новая колода</button>
             </div>
-            <div id="decks-grid" class="decks-grid">
-                <!-- Карточки колод будут появляться здесь -->
-            </div>
+            <div id="decks-grid" class="decks-grid"></div>
         </section>
 
         <!-- ЭКРАН 2: ВНУТРЕННОСТЬ КОЛОДЫ -->
@@ -35,11 +31,13 @@
             <button id="btn-back" class="btn-text">← Все колоды</button>
             
             <div class="screen-header">
-                <h2 id="current-deck-name">Название колоды</h2>
-                <p id="cards-stats" class="stats-badge">0 карточек</p>
+                <div>
+                    <h2 id="current-deck-name">Название колоды</h2>
+                    <p id="cards-stats" class="stats-badge">0 карточек</p>
+                </div>
+                <button id="btn-start-study" class="btn-primary hidden">▶ Тренировка</button>
             </div>
 
-            <!-- Форма добавления карточки -->
             <form id="new-card-form" class="new-card-form">
                 <h3>✨ Новая карточка</h3>
                 <div class="form-row">
@@ -49,7 +47,6 @@
                 </div>
             </form>
 
-            <!-- Таблица слов -->
             <div class="cards-table-container">
                 <table class="cards-table">
                     <thead>
@@ -59,15 +56,50 @@
                             <th>ДЕЙСТВИЯ</th>
                         </tr>
                     </thead>
-                    <tbody id="cards-list">
-                        <!-- Слова будут появляться здесь -->
-                    </tbody>
+                    <tbody id="cards-list"></tbody>
                 </table>
             </div>
         </section>
+
+        <!-- ЭКРАН 3: РЕЖИМ ТРЕНИРОВКИ -->
+        <section id="study-screen" class="screen hidden">
+            <div class="study-header">
+                <button id="btn-end-study" class="btn-text" style="margin: 0;">← Назад в колоду</button>
+                <div class="study-settings">
+                    <button id="btn-switch-dir" class="btn-secondary">EN → RU</button>
+                    <button id="btn-shuffle" class="btn-secondary">🔀 Перемешать</button>
+                </div>
+            </div>
+            
+            <div class="study-progress">
+                <h3 id="study-counter">1 / 5</h3>
+            </div>
+
+            <div class="study-card-container" id="study-card">
+                <div class="card-inner">
+                    <div class="card-face card-front">
+                        <span class="card-label" id="card-label-front">English</span>
+                        <h2 id="card-text-front">word</h2>
+                        <span class="card-hint">Нажмите, чтобы перевернуть</span>
+                    </div>
+                    <div class="card-face card-back">
+                        <span class="card-label" id="card-label-back">Перевод</span>
+                        <h2 id="card-text-back">слово</h2>
+                        <span class="card-hint">Нажмите, чтобы перевернуть</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="study-controls">
+                <button id="btn-prev-card" class="circle-btn">←</button>
+                <button id="btn-flip-card" class="btn-primary">Перевернуть</button>
+                <button id="btn-next-card" class="circle-btn">→</button>
+            </div>
+            <p class="keys-hint">Клавиши: [Пробел] — перевернуть, [←] [→] — листать</p>
+        </section>
     </main>
 
-    <!-- Модальное окно: Новая колода -->
+    <!-- Модалки (оставили как были) -->
     <div id="modal-new-deck" class="modal hidden">
         <div class="modal-content">
             <h2>Новая колода</h2>
@@ -81,20 +113,6 @@
             </form>
         </div>
     </div>
-
-    <!-- Модальное окно: Подтверждение удаления -->
-    <div id="modal-delete" class="modal hidden">
-        <div class="modal-content danger-modal">
-            <h2 id="delete-title">Удалить колоду?</h2>
-            <p>Отменить это действие нельзя.</p>
-            <div class="modal-actions">
-                <button type="button" class="btn-secondary close-modal">Отмена</button>
-                <button type="button" id="btn-confirm-delete" class="btn-danger">Удалить</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Скрипт с логикой (создадим на следующем шаге) -->
     <script src="app.js"></script>
 </body>
 </html>
