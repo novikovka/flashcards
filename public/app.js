@@ -1,24 +1,25 @@
 let decks = []; 
 let currentDeckId = null; 
 
-// --- СОСТОЯНИЕ ТРЕНИРОВКИ ---
-let studyCards = [];
-let currentCardIndex = 0;
-let isFlipped = false;
-let studyDirection = 'EN-RU'; // может быть 'RU-EN'
-let isShuffled = false;
-
-// --- ЭЛЕМЕНТЫ DOM ---
 const decksScreen = document.getElementById('decks-screen');
 const deckScreen = document.getElementById('deck-screen');
 const studyScreen = document.getElementById('study-screen');
 const decksGrid = document.getElementById('decks-grid');
 const decksStats = document.getElementById('decks-stats');
+const emptyState = document.getElementById('empty-state');
+const btnCreateFirst = document.getElementById('btn-create-first');
+
 const modalNewDeck = document.getElementById('modal-new-deck');
 const btnShowNewDeck = document.getElementById('btn-show-new-deck');
 const newDeckForm = document.getElementById('new-deck-form');
 const deckNameInput = document.getElementById('deck-name-input');
 const closeButtons = document.querySelectorAll('.close-modal');
+
+const modalDelete = document.getElementById('modal-delete');
+const deleteTitle = document.getElementById('delete-title');
+const deleteDesc = document.getElementById('delete-desc');
+const btnConfirmDelete = document.getElementById('btn-confirm-delete');
+let deleteAction = null; // Функция, которая выполнится при подтверждении удаления
 
 const btnBack = document.getElementById('btn-back');
 const currentDeckName = document.getElementById('current-deck-name');
@@ -26,10 +27,12 @@ const cardsStats = document.getElementById('cards-stats');
 const newCardForm = document.getElementById('new-card-form');
 const cardEnInput = document.getElementById('card-en');
 const cardRuInput = document.getElementById('card-ru');
+const cardErrorMsg = document.getElementById('card-error-msg');
 const cardsList = document.getElementById('cards-list');
 const btnStartStudy = document.getElementById('btn-start-study');
 
-// Элементы тренировки
+// Тренировка
+let studyCards = [], currentCardIndex = 0, isFlipped = false, studyDirection = 'EN-RU', isShuffled = false;
 const btnEndStudy = document.getElementById('btn-end-study');
 const studyCounter = document.getElementById('study-counter');
 const studyCardContainer = document.getElementById('study-card');
@@ -43,7 +46,6 @@ const btnFlipCard = document.getElementById('btn-flip-card');
 const btnSwitchDir = document.getElementById('btn-switch-dir');
 const btnShuffle = document.getElementById('btn-shuffle');
 
-// --- ФУНКЦИИ ИНИЦИАЛИЗАЦИИ И СЕТИ ---
 async function init() { await fetchDecks(); }
 
 async function fetchDecks() {
@@ -51,19 +53,28 @@ async function fetchDecks() {
         const response = await fetch('/api/decks');
         decks = await response.json();
         
-        if (studyScreen && !studyScreen.classList.contains('hidden')) {
-            // Если мы в режиме учебы, обновляем массив (вдруг на другом устройстве изменили)
+        if (!studyScreen.classList.contains('hidden')) {
             startStudy(currentDeckId, true);
         } else if (currentDeckId) {
             renderDeckView(currentDeckId);
         } else {
             renderDecks();
         }
-    } catch (error) {
-        console.error('Ошибка:', error);
-        decksStats.textContent = 'Ошибка загрузки';
-    }
+    } catch (error) { console.error(error); }
 }
+
+// Кастомное окно удаления
+function showDeleteModal(title, desc, onConfirm) {
+    deleteTitle.textContent = title;
+    deleteDesc.textContent = desc;
+    deleteAction = onConfirm;
+    modalDelete.classList.remove('hidden');
+}
+
+btnConfirmDelete.addEventListener('click', () => {
+    if (deleteAction) deleteAction();
+    modalDelete.classList.add('hidden');
+});
 
 function renderDecks() {
     decksScreen.classList.remove('hidden');
@@ -71,37 +82,51 @@ function renderDecks() {
     studyScreen.classList.add('hidden');
     decksGrid.innerHTML = '';
     
-    const totalCards = decks.reduce((sum, deck) => sum + deck.cards.length, 0);
-    decksStats.textContent = `${decks.length} колод · ${totalCards} карточки`;
+    // Пустое состояние
+    if (decks.length === 0) {
+        emptyState.classList.remove('hidden');
+        decksStats.classList.add('hidden');
+    } else {
+        emptyState.classList.add('hidden');
+        decksStats.classList.remove('hidden');
+        
+        const totalCards = decks.reduce((sum, deck) => sum + deck.cards.length, 0);
+        decksStats.textContent = `${decks.length} колод · ${totalCards} карточки`;
 
-    decks.forEach(deck => {
-        const card = document.createElement('div');
-        card.className = 'deck-card';
-        card.innerHTML = `
-            <div class="deck-actions"><button class="icon-btn btn-delete" data-id="${deck.id}" title="Удалить">🗑️</button></div>
-            <h3 style="font-size: 20px; margin-bottom: 10px;">${deck.name}</h3>
-            <p class="stats-badge" style="margin-bottom: 20px;">${deck.cards.length} карточек</p>
-            <div><button class="btn-secondary btn-open-deck" data-id="${deck.id}">Открыть</button></div>
-        `;
-        decksGrid.appendChild(card);
-    });
-
-    document.querySelectorAll('.btn-delete').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const id = e.target.getAttribute('data-id');
-            if (confirm('Удалить эту колоду?')) {
-                await fetch(`/api/decks/${id}`, { method: 'DELETE' });
-                fetchDecks();
-            }
+        decks.forEach(deck => {
+            const card = document.createElement('div');
+            card.className = 'deck-card';
+            card.innerHTML = `
+                <div class="deck-actions"><button class="icon-btn btn-delete" data-id="${deck.id}">🗑️</button></div>
+                <h3 style="font-size: 20px; margin-bottom: 10px;">${deck.name}</h3>
+                <p class="stats-badge" style="margin-bottom: 20px;">${deck.cards.length} карточек</p>
+                <div><button class="btn-secondary btn-open-deck" data-id="${deck.id}">Открыть</button></div>
+            `;
+            decksGrid.appendChild(card);
         });
-    });
 
-    document.querySelectorAll('.btn-open-deck').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            currentDeckId = e.target.getAttribute('data-id');
-            renderDeckView(currentDeckId);
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const deck = decks.find(d => d.id === id);
+                showDeleteModal(
+                    `Удалить колоду «${deck.name}»?`, 
+                    `Вместе с колодой удалятся ${deck.cards.length} карточек. Отменить это действие нельзя.`, 
+                    async () => {
+                        await fetch(`/api/decks/${id}`, { method: 'DELETE' });
+                        fetchDecks();
+                    }
+                );
+            });
         });
-    });
+
+        document.querySelectorAll('.btn-open-deck').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentDeckId = e.target.getAttribute('data-id');
+                renderDeckView(currentDeckId);
+            });
+        });
+    }
 }
 
 function renderDeckView(deckId) {
@@ -114,13 +139,7 @@ function renderDeckView(deckId) {
     
     currentDeckName.textContent = deck.name;
     cardsStats.textContent = `${deck.cards.length} карточек`;
-    
-    // Показываем кнопку старта тренировки только если есть слова
-    if (deck.cards.length > 0) {
-        btnStartStudy.classList.remove('hidden');
-    } else {
-        btnStartStudy.classList.add('hidden');
-    }
+    btnStartStudy.classList.toggle('hidden', deck.cards.length === 0);
 
     cardsList.innerHTML = '';
     deck.cards.forEach(card => {
@@ -129,20 +148,20 @@ function renderDeckView(deckId) {
             <td style="font-weight: 700;">${card.en}</td>
             <td>${card.ru}</td>
             <td>
-                <button class="btn-text btn-edit-card" data-id="${card.id}" style="margin:0 10px 0 0;">✏ Изменить</button>
-                <button class="btn-text btn-delete-card" data-id="${card.id}" style="color: var(--danger); margin:0;">🗑 Удалить</button>
+                <button class="btn-text btn-edit-card" data-id="${card.id}">✏ Изменить</button>
+                <button class="btn-text btn-delete-card" data-id="${card.id}" style="color: var(--danger);">🗑 Удалить</button>
             </td>
         `;
         cardsList.appendChild(tr);
     });
 
     document.querySelectorAll('.btn-delete-card').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', (e) => {
             const cardId = e.target.getAttribute('data-id');
-            if (confirm('Удалить это слово?')) {
+            showDeleteModal('Удалить слово?', 'Оно будет удалено навсегда.', async () => {
                 await fetch(`/api/decks/${deckId}/cards/${cardId}`, { method: 'DELETE' });
                 fetchDecks();
-            }
+            });
         });
     });
 
@@ -157,8 +176,7 @@ function renderDeckView(deckId) {
 
             if (newEn.trim() && newRu.trim()) {
                 await fetch(`/api/decks/${deckId}/cards/${cardId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ en: newEn.trim(), ru: newRu.trim() })
                 });
                 fetchDecks();
@@ -167,9 +185,7 @@ function renderDeckView(deckId) {
     });
 }
 
-// --- ЛОГИКА ТРЕНИРОВКИ ---
-
-// Функция перемешивания массива
+// Тренировка
 function shuffleArray(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -182,112 +198,72 @@ function shuffleArray(array) {
 function startStudy(deckId, keepState = false) {
     const deck = decks.find(d => d.id === deckId);
     if (!deck || deck.cards.length === 0) return;
-
-    deckScreen.classList.add('hidden');
-    studyScreen.classList.remove('hidden');
-
-    // Если не просили сохранить стейт (при перезагрузке), сбрасываем всё
+    deckScreen.classList.add('hidden'); studyScreen.classList.remove('hidden');
     if (!keepState) {
-        isShuffled = false;
-        btnShuffle.classList.remove('active');
-        studyCards = [...deck.cards];
-        currentCardIndex = 0;
+        isShuffled = false; btnShuffle.classList.remove('active'); btnShuffle.textContent = '🔀 Перемешать';
+        studyCards = [...deck.cards]; currentCardIndex = 0;
     }
     renderStudyCard();
 }
 
 function renderStudyCard() {
     if (studyCards.length === 0) return;
-    
-    isFlipped = false;
-    studyCardContainer.classList.remove('flipped');
-    
+    isFlipped = false; studyCardContainer.classList.remove('flipped');
     const card = studyCards[currentCardIndex];
     studyCounter.textContent = `${currentCardIndex + 1} / ${studyCards.length}`;
-
     if (studyDirection === 'EN-RU') {
-        cardLabelFront.textContent = 'English';
-        cardTextFront.textContent = card.en;
-        cardLabelBack.textContent = 'Перевод';
-        cardTextBack.textContent = card.ru;
+        cardLabelFront.textContent = 'English'; cardTextFront.textContent = card.en;
+        cardLabelBack.textContent = 'Перевод'; cardTextBack.textContent = card.ru;
     } else {
-        cardLabelFront.textContent = 'Russian';
-        cardTextFront.textContent = card.ru;
-        cardLabelBack.textContent = 'Translation';
-        cardTextBack.textContent = card.en;
+        cardLabelFront.textContent = 'Russian'; cardTextFront.textContent = card.ru;
+        cardLabelBack.textContent = 'Translation'; cardTextBack.textContent = card.en;
     }
 }
 
-function flipCard() {
-    isFlipped = !isFlipped;
-    studyCardContainer.classList.toggle('flipped');
-}
+function flipCard() { isFlipped = !isFlipped; studyCardContainer.classList.toggle('flipped'); }
+function nextCard() { if (currentCardIndex < studyCards.length - 1) { currentCardIndex++; renderStudyCard(); } }
+function prevCard() { if (currentCardIndex > 0) { currentCardIndex--; renderStudyCard(); } }
 
-function nextCard() {
-    if (currentCardIndex < studyCards.length - 1) {
-        currentCardIndex++;
-        renderStudyCard();
-    }
-}
-
-function prevCard() {
-    if (currentCardIndex > 0) {
-        currentCardIndex--;
-        renderStudyCard();
-    }
-}
-
-// Обработчики кнопок тренировки
 btnStartStudy.addEventListener('click', () => startStudy(currentDeckId));
 btnEndStudy.addEventListener('click', () => renderDeckView(currentDeckId));
-
 studyCardContainer.addEventListener('click', flipCard);
 btnFlipCard.addEventListener('click', flipCard);
 btnNextCard.addEventListener('click', nextCard);
 btnPrevCard.addEventListener('click', prevCard);
 
-// Смена направления
 btnSwitchDir.addEventListener('click', () => {
     studyDirection = studyDirection === 'EN-RU' ? 'RU-EN' : 'EN-RU';
     btnSwitchDir.textContent = studyDirection === 'EN-RU' ? 'EN → RU' : 'RU → EN';
     renderStudyCard();
 });
 
-// Перемешивание
 btnShuffle.addEventListener('click', () => {
     isShuffled = !isShuffled;
     const deck = decks.find(d => d.id === currentDeckId);
-    if (isShuffled) {
-        btnShuffle.classList.add('active');
-        btnShuffle.textContent = '✓ Перемешано';
-        studyCards = shuffleArray(deck.cards);
-    } else {
-        btnShuffle.classList.remove('active');
-        btnShuffle.textContent = '🔀 Перемешать';
-        studyCards = [...deck.cards];
-    }
-    currentCardIndex = 0;
-    renderStudyCard();
+    if (isShuffled) { btnShuffle.classList.add('active'); btnShuffle.textContent = '✓ Перемешано'; studyCards = shuffleArray(deck.cards); } 
+    else { btnShuffle.classList.remove('active'); btnShuffle.textContent = '🔀 Перемешать'; studyCards = [...deck.cards]; }
+    currentCardIndex = 0; renderStudyCard();
 });
 
-// Управление с клавиатуры
 document.addEventListener('keydown', (e) => {
-    // Работаем только если открыт экран тренировки
     if (!studyScreen.classList.contains('hidden')) {
-        if (e.code === 'Space') {
-            e.preventDefault(); // чтобы страница не скроллилась от пробела
-            flipCard();
-        } else if (e.code === 'ArrowRight') {
-            nextCard();
-        } else if (e.code === 'ArrowLeft') {
-            prevCard();
-        }
+        if (e.code === 'Space') { e.preventDefault(); flipCard(); } 
+        else if (e.code === 'ArrowRight') { nextCard(); } 
+        else if (e.code === 'ArrowLeft') { prevCard(); }
     }
 });
 
-// --- БАЗОВЫЕ СОБЫТИЯ (оставили как были) ---
-btnShowNewDeck.addEventListener('click', () => { modalNewDeck.classList.remove('hidden'); deckNameInput.focus(); });
-closeButtons.forEach(btn => { btn.addEventListener('click', () => { modalNewDeck.classList.add('hidden'); newDeckForm.reset(); }); });
+// События интерфейса
+const openNewDeck = () => { modalNewDeck.classList.remove('hidden'); deckNameInput.focus(); };
+btnShowNewDeck.addEventListener('click', openNewDeck);
+btnCreateFirst.addEventListener('click', openNewDeck);
+
+closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => { 
+        modalNewDeck.classList.add('hidden'); modalDelete.classList.add('hidden'); newDeckForm.reset(); 
+    });
+});
+
 newDeckForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = deckNameInput.value.trim();
@@ -295,14 +271,41 @@ newDeckForm.addEventListener('submit', async (e) => {
     await fetch('/api/decks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
     newDeckForm.reset(); modalNewDeck.classList.add('hidden'); fetchDecks();
 });
+
 btnBack.addEventListener('click', () => { currentDeckId = null; renderDecks(); });
+
+// Форма добавления карточки (Валидация)
 newCardForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentDeckId) return;
-    const en = cardEnInput.value.trim(); const ru = cardRuInput.value.trim();
-    if (!en || !ru) return;
-    await fetch(`/api/decks/${currentDeckId}/cards`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ en, ru }) });
-    newCardForm.reset(); cardEnInput.focus(); fetchDecks(); 
+
+    const en = cardEnInput.value.trim();
+    const ru = cardRuInput.value.trim();
+    
+    // Очищаем предыдущие ошибки
+    cardEnInput.classList.remove('input-error');
+    cardRuInput.classList.remove('input-error');
+    cardErrorMsg.classList.add('hidden');
+
+    if (!en || !ru) {
+        if (!en) cardEnInput.classList.add('input-error');
+        if (!ru) cardRuInput.classList.add('input-error');
+        cardErrorMsg.textContent = 'Введите текст в оба поля';
+        cardErrorMsg.classList.remove('hidden');
+        return;
+    }
+
+    await fetch(`/api/decks/${currentDeckId}/cards`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ en, ru })
+    });
+    
+    newCardForm.reset(); 
+    cardEnInput.focus(); 
+    fetchDecks(); 
 });
+
+// Убираем подсветку ошибки при начале ввода
+cardEnInput.addEventListener('input', () => { cardEnInput.classList.remove('input-error'); cardErrorMsg.classList.add('hidden'); });
+cardRuInput.addEventListener('input', () => { cardRuInput.classList.remove('input-error'); cardErrorMsg.classList.add('hidden'); });
 
 init();

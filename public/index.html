@@ -23,6 +23,15 @@
                 </div>
                 <button id="btn-show-new-deck" class="btn-primary">+ Новая колода</button>
             </div>
+            
+            <!-- Состояние: пустой список -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-icon">📚</div>
+                <h3>Пока нет ни одной колоды</h3>
+                <p>Создайте первую колоду, чтобы начать добавлять слова</p>
+                <button id="btn-create-first" class="btn-primary">Создать первую колоду</button>
+            </div>
+
             <div id="decks-grid" class="decks-grid"></div>
         </section>
 
@@ -38,13 +47,15 @@
                 <button id="btn-start-study" class="btn-primary hidden">▶ Тренировка</button>
             </div>
 
+            <!-- Форма с ручной валидацией -->
             <form id="new-card-form" class="new-card-form">
                 <h3>✨ Новая карточка</h3>
                 <div class="form-row">
-                    <input type="text" id="card-en" placeholder="Английский (слово или фраза)" required>
-                    <input type="text" id="card-ru" placeholder="Перевод на русский" required>
+                    <input type="text" id="card-en" placeholder="Английский (слово или фраза)">
+                    <input type="text" id="card-ru" placeholder="Перевод на русский">
                     <button type="submit" class="btn-primary">+ Добавить</button>
                 </div>
+                <div id="card-error-msg" class="error-msg hidden">Заполните оба поля</div>
             </form>
 
             <div class="cards-table-container">
@@ -64,7 +75,7 @@
         <!-- ЭКРАН 3: РЕЖИМ ТРЕНИРОВКИ -->
         <section id="study-screen" class="screen hidden">
             <div class="study-header">
-                <button id="btn-end-study" class="btn-text" style="margin: 0;">← Назад в колоду</button>
+                <button id="btn-end-study" class="btn-text" style="margin: 0;">← Назад</button>
                 <div class="study-settings">
                     <button id="btn-switch-dir" class="btn-secondary">EN → RU</button>
                     <button id="btn-shuffle" class="btn-secondary">🔀 Перемешать</button>
@@ -99,13 +110,13 @@
         </section>
     </main>
 
-    <!-- Модалки (оставили как были) -->
+    <!-- Модальное окно: Новая колода -->
     <div id="modal-new-deck" class="modal hidden">
         <div class="modal-content">
             <h2>Новая колода</h2>
             <form id="new-deck-form">
-                <label>НАЗВАНИЕ КОЛОДЫ</label>
-                <input type="text" id="deck-name-input" placeholder="Например: Business English" required>
+                <label style="display:block; margin: 15px 0 5px; font-size:13px; font-weight:700; color:#4F46E5;">НАЗВАНИЕ</label>
+                <input type="text" id="deck-name-input" placeholder="Например: Business English" style="width:100%; margin-bottom:10px;" required>
                 <div class="modal-actions">
                     <button type="button" class="btn-secondary close-modal">Отмена</button>
                     <button type="submit" class="btn-primary">Создать</button>
@@ -113,6 +124,19 @@
             </form>
         </div>
     </div>
+
+    <!-- Модальное окно: Кастомное подтверждение удаления -->
+    <div id="modal-delete" class="modal hidden">
+        <div class="modal-content danger-modal">
+            <h2 id="delete-title">Удалить?</h2>
+            <p id="delete-desc" style="color:#64748B; margin-top:10px;">Отменить это действие нельзя.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary close-modal">Отмена</button>
+                <button type="button" id="btn-confirm-delete" class="btn-danger">Удалить</button>
+            </div>
+        </div>
+    </div>
+    
     <script src="app.js"></script>
 </body>
 </html>
